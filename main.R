@@ -9,7 +9,10 @@
 library(rattle)       # toolkit box
 library(reshape2)     # Data Preparating
 library(plyr)         # Data Wrangling
+# ----- visual ------ #
 library(ggplot2)      # Data Visualization
+library(rCharts)      # Javascript dataVisual
+library(gridExtra)    # Multiple sub-plots
 # ----- modeling ---- #
 library(randomForest) # Utitlize na.roughFix() to impute missing data
 library(animation)    # Demonstrate kmeans
@@ -52,9 +55,9 @@ UserProfileRanGen <- function(id, db = sim){
   return(res)
 }
 
-# ################ #
-# SIMULATION DATA  #
-# ################ #
+# ##################### #
+# SIMULATION DATA -------
+# ##################### #
 # Profile:
 #   age:
 #   gender:
@@ -69,28 +72,74 @@ temp     <- list()
 temp$IDs <- sample(x=1:100000, size=set$size, replace=F)
 
 # Generate the simulated data
-db               <- as.data.frame(t(sapply(temp$IDs, UserProfileRanGen)))
-names(db)        <- normVarNames(names(db))
-db$age           <- as.numeric(db$age)
-db$location      <- as.factor(db$location)
-db$genre_1       <- as.factor(db$genre_1)
-db$genre_2       <- as.factor(db$genre_2)
-db$genre_3       <- as.factor(db$genre_3)
-db$genre_4       <- as.factor(db$genre_4)
-db$genre_5       <- as.factor(db$genre_5)
-db$instruments_1 <- as.factor(db$instruments_1)
-db$instruments_2 <- as.factor(db$instruments_2)
-db$instruments_3 <- as.factor(db$instruments_3)
+db         <- as.data.frame(t(sapply(temp$IDs, UserProfileRanGen)), stringsAsFactor = TRUE)
+names(db)  <- normVarNames(names(db))
+db$id      <- levels(db$id)[as.numeric(db$id)]
+db$age     <- as.numeric(db$age)
+
+# Process factor/chara variables
+db$location      <- as.numeric(db$location)
+db$genre_1       <- as.numeric(db$genre_1)
+db$genre_2       <- as.numeric(db$genre_2)
+db$genre_3       <- as.numeric(db$genre_3)
+db$genre_4       <- as.numeric(db$genre_4)
+db$genre_5       <- as.numeric(db$genre_5)
+db$instruments_1 <- as.numeric(db$instruments_1)
+db$instruments_2 <- as.numeric(db$instruments_2)
+db$instruments_3 <- as.numeric(db$instruments_3)
+
+# scale(normalization)
+db[, -1] <- scale(db[, -1])
 
 # ############## #
 # Visualization  #
 # ############## #
 img <- list()
-img <- ggplot(data=db, aes(id, location, genre1, genre2, genre3, genre4, genre5, instruments1, instruments2, instruments3)) + 
-       geom_tile(colour = "white")                                                                                          + 
-       scale_fill_gradient(low = "white", high = "steelblue")       
+# img <- ggplot(data=db, aes(id, location, genre1, genre2, genre3, genre4, genre5, instruments1, instruments2, instruments3)) + 
+#       geom_tile(colour = "white")                                                                                          + 
+#       scale_fill_gradient(low = "white", high = "steelblue")       
 
 # ##################################### #
-# CLUSTERING ANALYSIS: K-MEANS CLUSTERS #
+# CLUSTERING ANALYSIS: K-MEANS CLUSTERS ----
 # ##################################### #
+model       <- list()
+model$km_10 <- kmeans(x=db[, -1], centers=10) # kmean clustering, after removing id variable
+model$km_6  <- kmeans(x=db[, -1], centers=6)  # kmean clustering, after removing id variable
+
+# ############################# #
+# EVALUATION THE MODEL ---------
+# ############################# #
+# RadialPlot: Cluster Center (High-dimensional)
+temp$dscm         <- melt(model$km_10$centers)
+names(temp$dscm)  <- c("Cluster", "Variable", "Value")
+temp$dscm$Cluster <- factor(temp$dscm$Cluster)
+temp$dscm$Order   <- as.vector(sapply(1:length(unique(temp$dscm$Variable)), rep, 10))
+img$rp_kmc        <- ggplot(temp$dscm, aes(x = reorder(Variable, Order), 
+                                           y = Value, group = Cluster, colour = Cluster))
+img$rp_kmc   <- img$rp_kmc + coord_polar()
+img$rp_kmc   <- img$rp_kmc + geom_point() + geom_path()
+img$rp_kmc   <- img$rp_kmc + labs(x=NULL, y=NULL)
+img$rp_kmc   <- img$rp_kmc + theme(axis.ticks.y=element_blank(), axis.text.y=element_blank())
+
+# Special Toolkit
+source("http://onepager.togaware.com/CreateRadialPlot.R")
+temp$dsc_c10 <- data.frame(group=factor(1:10), model$km_10$centers)
+CreateRadialPlot(temp$dsc_c10, grid.min=-2, grid.max=2, plot.extent.x=1.5)
+
+# ############################ #
+# Viualize kmeans(centers = 4) #
+# ############################ #
+temp$dsc_c6    <- data.frame(group=factor(1:6), model$km_6$centers)
+img$rp_kmc6_p1 <- CreateRadialPlot(subset(temp$dsc_c6, group == 1),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p2 <- CreateRadialPlot(subset(temp$dsc_c6, group == 2),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p3 <- CreateRadialPlot(subset(temp$dsc_c6, group == 3),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p4 <- CreateRadialPlot(subset(temp$dsc_c6, group == 4),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p5 <- CreateRadialPlot(subset(temp$dsc_c6, group == 5),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p6 <- CreateRadialPlot(subset(temp$dsc_c6, group == 6),
+                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
 
