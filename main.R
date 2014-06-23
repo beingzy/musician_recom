@@ -5,17 +5,23 @@
 # Author: Yi Zhang                                 #
 # Date: Jun/22/2014                                #
 # ################################################ #
+# ---- toolbox ------ #
+library(rattle)       # toolkit box
 library(reshape2)     # Data Preparating
 library(plyr)         # Data Wrangling
 library(ggplot2)      # Data Visualization
+# ----- modeling ---- #
 library(randomForest) # Utitlize na.roughFix() to impute missing data
 library(animation)    # Demonstrate kmeans
 library(fpc)          # Tuning Clustering with kmeansuns() and clusterboot()
 library(wskm)         # Weighted subspace clustering
 library(amap)         # hclusterpar
+# ---- database ----- #
+library(rjson)        # Access to JSON objects
+library(rmongodb)     # Communicate with MongoDB
 
 # ################## #
-# SET UP Environent  #
+# SET UP Environment #
 # ################## #
 repo        <- list()
 repo$data   <- "./data"
@@ -62,18 +68,19 @@ set$ratio <- .7
 temp     <- list()
 temp$IDs <- sample(x=1:100000, size=set$size, replace=F)
 
-db <- as.data.frame(t(sapply(temp$IDs, UserProfileRanGen)))
-#
-db$age          <- as.numeric(db$age)
-db$location     <- as.factor(db$location)
-db$genre1       <- as.factor(db$genre1)
-db$genre2       <- as.factor(db$genre2)
-db$genre3       <- as.factor(db$genre3)
-db$genre4       <- as.factor(db$genre4)
-db$genre5       <- as.factor(db$genre5)
-db$instruments1 <- as.factor(db$instruments1)
-db$instruments2 <- as.factor(db$instruments2)
-db$instruments3 <- as.factor(db$instruments3)
+# Generate the simulated data
+db               <- as.data.frame(t(sapply(temp$IDs, UserProfileRanGen)))
+names(db)        <- normVarNames(names(db))
+db$age           <- as.numeric(db$age)
+db$location      <- as.factor(db$location)
+db$genre_1       <- as.factor(db$genre_1)
+db$genre_2       <- as.factor(db$genre_2)
+db$genre_3       <- as.factor(db$genre_3)
+db$genre_4       <- as.factor(db$genre_4)
+db$genre_5       <- as.factor(db$genre_5)
+db$instruments_1 <- as.factor(db$instruments_1)
+db$instruments_2 <- as.factor(db$instruments_2)
+db$instruments_3 <- as.factor(db$instruments_3)
 
 # ############## #
 # Visualization  #
@@ -83,4 +90,7 @@ img <- ggplot(data=db, aes(id, location, genre1, genre2, genre3, genre4, genre5,
        geom_tile(colour = "white")                                                                                          + 
        scale_fill_gradient(low = "white", high = "steelblue")       
 
+# ##################################### #
+# CLUSTERING ANALYSIS: K-MEANS CLUSTERS #
+# ##################################### #
 
