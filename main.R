@@ -17,7 +17,7 @@ library(gridExtra)    # Multiple sub-plots
 library(randomForest) # Utitlize na.roughFix() to impute missing data
 library(animation)    # Demonstrate kmeans
 library(fpc)          # Tuning Clustering with kmeansuns() and clusterboot()
-library(wskm)         # Weighted subspace clustering
+library(wskm)         # Entropy Weighted subspace clustering
 library(amap)         # hclusterpar
 # ---- database ----- #
 library(rjson)        # Access to JSON objects
@@ -36,7 +36,6 @@ sim$genres <- c("pop", "blues", "avant-garde", "red dirt", "zydeco", "classic co
                 "sung poetry", "indie folk", "techno-folk", "hip pop", "grime", "jazz")
 sim$instru <- c("clapsticks", "drum kit", "hang", "piano", "steelpan", "triangle", "wood block", "guitar", 
                 "wheelharp", "MIDI keyboard")
-
 
 # ##################### #
 # FUNCTION DEFINITIONS  #
@@ -102,9 +101,18 @@ img <- list()
 # ##################################### #
 # CLUSTERING ANALYSIS: K-MEANS CLUSTERS ----
 # ##################################### #
-model       <- list()
-model$km_10 <- kmeans(x=db[, -1], centers=10) # kmean clustering, after removing id variable
-model$km_6  <- kmeans(x=db[, -1], centers=6)  # kmean clustering, after removing id variable
+model         <- list()
+model$km_10   <- kmeans(x=db[, -1], centers=10) # kmean clustering, after removing id variable
+model$km_6    <- kmeans(x=db[, -1], centers=6)  # kmean clustering, after removing id variable
+model$km_6_cb <- clusterboot(data = db[, -1], 
+                             clustermethod=kmeansCBI, 
+                             runs   = 100, 
+                             krange = 6, 
+                             seed   = 42)
+temp$nk        <- 1:50
+model$km_sel_c <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="ch")
+model$km_sel_a <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="asw")
+
 
 # ############################# #
 # EVALUATION THE MODEL ---------
@@ -129,17 +137,30 @@ CreateRadialPlot(temp$dsc_c10, grid.min=-2, grid.max=2, plot.extent.x=1.5)
 # ############################ #
 # Viualize kmeans(centers = 4) #
 # ############################ #
-temp$dsc_c6    <- data.frame(group=factor(1:6), model$km_6$centers)
-img$rp_kmc6_p1 <- CreateRadialPlot(subset(temp$dsc_c6, group == 1),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
-img$rp_kmc6_p2 <- CreateRadialPlot(subset(temp$dsc_c6, group == 2),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
-img$rp_kmc6_p3 <- CreateRadialPlot(subset(temp$dsc_c6, group == 3),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
-img$rp_kmc6_p4 <- CreateRadialPlot(subset(temp$dsc_c6, group == 4),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
-img$rp_kmc6_p5 <- CreateRadialPlot(subset(temp$dsc_c6, group == 5),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
-img$rp_kmc6_p6 <- CreateRadialPlot(subset(temp$dsc_c6, group == 6),
-                                   grid.max = -2, grid.max = 2, plot.extent.x = 2)
+temp$dsc_c6    <- data.frame(group=factor(1:6), model$km_6mode$centers)
+img$rp_kmc6_p1 <- CreateRadialPlot(subset(temp$dsc_c6, group == 1), grid.min = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p2 <- CreateRadialPlot(subset(temp$dsc_c6, group == 2), grid.min = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p3 <- CreateRadialPlot(subset(temp$dsc_c6, group == 3), grid.min = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p4 <- CreateRadialPlot(subset(temp$dsc_c6, group == 4), grid.min = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p5 <- CreateRadialPlot(subset(temp$dsc_c6, group == 5), grid.min = -2, grid.max = 2, plot.extent.x = 2)
+img$rp_kmc6_p6 <- CreateRadialPlot(subset(temp$dsc_c6, group == 6), grid.min = -2, grid.max = 2, plot.extent.x = 2)
 
+grid.arrange(img$rp_kmc6_p1 + ggtitle("Cluster #1"), 
+             img$rp_kmc6_p2 + ggtitle("Cluster #2"),
+             img$rp_kmc6_p3 + ggtitle("Cluster #3"),
+             img$rp_kmc6_p4 + ggtitle("Cluster #4"),
+             img$rp_kmc6_p5 + ggtitle("Cluster #5"),
+             img$rp_kmc6_p6 + ggtitle("Cluster #6"))
+
+# ####################################### #
+# Visualize the selection of k (#centers) #
+# ####################################### #
+temp$dsc  <- data.frame(k=temp$nk, ch=scale(model$km_sel_c$crit), aws=scale(model$km_sel_c$crit))
+temp$dscm <- melt(temp$dsc, id.vars="k", variable.name="Measure")
+img$k_sel <- ggplot(temp$dscm, aes(x=k, y=value, colur = Measure)) +
+             geom_point(aes(shape=Measure))                        +
+             geom_line(aes(linetype=Measure))                      +
+             scale_x_continuous(breaks=temp$nk, labels = temp$nk)          
+
+              
+             
