@@ -23,77 +23,7 @@ library(amap)         # hclusterpar
 library(rjson)        # Access to JSON objects
 library(rmongodb)     # Communicate with MongoDB
 
-# ################## #
-# SET UP Environment #
-# ################## #
-repo        <- list()
-repo$data   <- "./data"
-repo$output <- "./output"
-
-sim        <- list()
-sim$loc    <- c("new york city", "san francisico", "chengdu", "beijing", "shanghai", "taipei")
-sim$genres <- c("pop", "blues", "avant-garde", "red dirt", "zydeco", "classic country", "progressive folk", "american folk revival",
-                "sung poetry", "indie folk", "techno-folk", "hip pop", "grime", "jazz")
-sim$instru <- c("clapsticks", "drum kit", "hang", "piano", "steelpan", "triangle", "wood block", "guitar", 
-                "wheelharp", "MIDI keyboard")
-
-# ##################### #
-# FUNCTION DEFINITIONS  #
-# ##################### #
-UserProfileRanGen <- function(id, db = sim){
-  # ######################## #
-  # simulate a user profile  # 
-  # ######################## #
-  id     <- id
-  gender <- sample(x=c("female", "male"), size=1)
-  age    <- sample(x=12:45, size=1)
-  loc    <- sample(x = sim$loc, size=1)
-  genres <- sample(sim$genres, size=5)
-  instru <- sample(sim$instru, size = 3)
-  res    <- c("id" = id, "age" = age, "location" = loc, "genre" = genres, "instruments" = instru)
-  return(res)
-}
-
-# ##################### #
-# SIMULATION DATA -------
-# ##################### #
-# Profile:
-#   age:
-#   gender:
-#   location:
-#   genres(music):
-#   instruments:
-set       <- list()
-set$size  <- 1000
-set$ratio <- .7
-
-temp     <- list()
-temp$IDs <- sample(x=1:100000, size=set$size, replace=F)
-
-# Generate the simulated data
-db         <- as.data.frame(t(sapply(temp$IDs, UserProfileRanGen)), stringsAsFactor = TRUE)
-names(db)  <- normVarNames(names(db))
-db$id      <- levels(db$id)[as.numeric(db$id)]
-db$age     <- as.numeric(db$age)
-
-# Process factor/chara variables
-db$location      <- as.numeric(db$location)
-db$genre_1       <- as.numeric(db$genre_1)
-db$genre_2       <- as.numeric(db$genre_2)
-db$genre_3       <- as.numeric(db$genre_3)
-db$genre_4       <- as.numeric(db$genre_4)
-db$genre_5       <- as.numeric(db$genre_5)
-db$instruments_1 <- as.numeric(db$instruments_1)
-db$instruments_2 <- as.numeric(db$instruments_2)
-db$instruments_3 <- as.numeric(db$instruments_3)
-
-# scale(normalization)
-db[, -1] <- scale(db[, -1])
-
-# ############## #
-# Visualization  #
-# ############## #
-img <- list()
+.lSys
 # img <- ggplot(data=db, aes(id, location, genre1, genre2, genre3, genre4, genre5, instruments1, instruments2, instruments3)) + 
 #       geom_tile(colour = "white")                                                                                          + 
 #       scale_fill_gradient(low = "white", high = "steelblue")       
@@ -110,9 +40,10 @@ model$km_6_cb <- clusterboot(data = db[, -1],
                              krange = 6, 
                              seed   = 42)
 temp$nk        <- 1:50
-model$km_sel_c <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="ch")
-model$km_sel_a <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="asw")
-
+model$km_sel_c    <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="ch")
+model$km_sel_a    <- kmeansruns(scale(db[, -1]), krange=temp$nk, criterion="asw")
+model$km_sel_c_gi <- kmeansruns(scale(db[, -c(1:3)]), krange=temp$nk, criterion="ch")
+model$km_sel_a_gi <- kmeansruns(scale(db[, -c(1:3)]), krange=temp$nk, criterion="asw")
 
 # ############################# #
 # EVALUATION THE MODEL ---------
@@ -155,12 +86,73 @@ grid.arrange(img$rp_kmc6_p1 + ggtitle("Cluster #1"),
 # ####################################### #
 # Visualize the selection of k (#centers) #
 # ####################################### #
-temp$dsc  <- data.frame(k=temp$nk, ch=scale(model$km_sel_c$crit), aws=scale(model$km_sel_c$crit))
+# TYPE1 MODEL: age + location + genre + instrument 
+# Optimal K = 21, chosen value of K = 20
+temp$dsc  <- data.frame(k=temp$nk, ch=scale(model$km_sel_c$crit), asw=scale(model$km_sel_a$crit))
 temp$dscm <- melt(temp$dsc, id.vars="k", variable.name="Measure")
 img$k_sel <- ggplot(temp$dscm, aes(x=k, y=value, colur = Measure)) +
              geom_point(aes(shape=Measure))                        +
              geom_line(aes(linetype=Measure))                      +
-             scale_x_continuous(breaks=temp$nk, labels = temp$nk)          
+             scale_x_continuous(breaks=temp$nk, labels = temp$nk)  +
+             ggtitle("K Selection for Type 1 Model")
+# find the optimal size
+temp$diff  <- scale(model$km_sel_c$crit) - scale(model$km_sel_a$crit)
+temp$opt_k <- temp$nk[which(abs(temp$diff) == min(abs(temp$diff)))]
+cat(paste("*** OPTIMAL K = ", temp$opt_k, "    ****\n"))
+# ####################################### #
+# TYPE2 MODEL: genre + instrument 
+# Optimal k = 
+temp$dsc  <- data.frame(k=temp$nk, ch=scale(model$km_sel_c_gi$crit), asw=scale(model$km_sel_a_gi$crit))
+temp$dscm <- melt(temp$dsc, id.vars="k", variable.name="Measure")
+img$k_sel <- ggplot(temp$dscm, aes(x=k, y=value, colur = Measure)) +
+  geom_point(aes(shape=Measure))                        +
+  geom_line(aes(linetype=Measure))                      +
+  scale_x_continuous(breaks=temp$nk, labels = temp$nk)  +
+  ggtitle("K Selection for Type 2 Model") 
+# find the optimal size
+temp$diff  <- scale(model$km_sel_c$crit) - scale(model$km_sel_a$crit)
+temp$opt_k <- temp$nk[which(abs(temp$diff) == min(abs(temp$diff)))]
+cat(paste("*** OPTIMAL K = ", temp$opt_k, "    ****\n"))
 
-              
-             
+# ####################################### #
+# TRAIN TYPE1 & TYPE 2 MODEL --------------
+model       <- list()
+model$km_t1 <- kmeans(x=db[, -1],      centers=20) # kmean clustering, after removing id variable
+model$km_t2 <- kmeans(x=db[, -c(1:3)], centers=20) # kmean clustering, after removing id variable
+
+# ####################################### #
+# RECOMMENDATION ENGINE -------------------
+# ####################################### #
+# S1: Predict observation cluster
+# S2: Find nearest neighbor within cluster
+# data(unclustred) --> kmeans -- (+)cluster ---> search neigbor within cluster --> give recommendation
+Recomend <- function(new_obs, model, train_data, topN = 5) {
+  # ################################# #
+  # Return prediction                 #
+  # ################################# #
+  temp$pred_c <- predict(model, new_obs)
+  temp$nb_idx <- which(model$cluster == temp$pred_c)
+  temp$dist   <- sapply(temp$nb_idx, 
+                        FUN=function(idx){
+                          ds  <- rbind(db[idx, ], new_obs)
+                          res <- dist(x=ds, method="manhattan")
+                          return(res)
+                        })
+  recom_all <- train_data$id[ temp$nb_idx[order(temp$dist, decreasing=F)] ]
+  if( new_obs['id'] %in% train_data$id ) recom_all <- recom_all[-which(recom_all == new_obs$id)]
+  res       <- recom_all[1:topN]
+  return(res)
+}
+
+DisplayUser <- function(user_id, user_db, fields = NA){
+  # ###################################### #
+  # Return user profile with given user_id #
+  # ###################################### #
+  if( !(is.na(fields)) ){
+    fields  <- fields[fields %in% colnames(user_db)]
+    user_db <- user_db[, fields]
+  }
+  res <- subset(user_db, id = user_id)
+  return(res)
+}
+

@@ -84,7 +84,7 @@ class Musician:
         return self_json
  
 ## Data Manipulation ---------------------------
-def json2MusicianObj(user_json):
+def jsonToMusicianObj(user_json):
     # Convert json object from MongoDB to Musician object
     _id        = str(user_json['_id'])
     DoB        = user_json['DoB']
@@ -151,7 +151,7 @@ test_set    = db_dict_coded[test_idx]
 kmeans_k20 = KMeans(init='k-means++', n_clusters = 20, n_init = 1000)
 kmeans_k20.fit(train_set
 
-## b-3. Evaliation Model    -----------------------------------------------------
+## b-3. Evaluation Model    -----------------------------------------------------
 test_labels = kmeans_k20.predict(test_set)
 train_error = metrics.silhouette_score(train_set, kmeans_k20.labels_, metric='euclidean')
 test_error  = metrics.silhouette_score(test_set,  test_labels,        metric='euclidean')
