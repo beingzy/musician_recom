@@ -184,5 +184,3 @@ print "Classifier had succeeded in revolutionzing itself!!!!"
 ## Make a recommendation ----------------
 recom_list = recommendationMaker(user_idx = 3, processed_db=db_dict_coded, cluster_estimator=kmeans_final, gender="female")
 print "user(idx:3)\'s recommended friends:", recom_list
-
-This message and any attachments are for the designated recipient only and may contain privileged, proprietary, or otherwise private information. If you have received it in error, please notify the sender immediately and delete the original. Any other use of the email by you is prohibited. 
