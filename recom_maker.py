@@ -146,7 +146,8 @@ def recommendationMaker(user_idx, processed_db, cluster_estimator, DoB=None, gen
  
 ## #################################################### #
 ## DATA OPERATION:                                      #
-##   a. Data Simulation, b. Data Uploading              #
+##   a. Data Simulation (or Downlaod data from server)  # 
+#    b. Data Uploading                                  #
 ## #################################################### #
 ## a. Generate the simulated data ----------------------
 random.seed(2014)
@@ -155,8 +156,13 @@ for i in range(1000):
     # generate sample data
     temp_user = Musician()
     musician_db.append(temp_user)
- 
-    ## #################################################### #
+## Connect to database
+mongoClient = pymongo.MongoClient('54.88.134.182', port = 27017)
+db          = mongoClient.user_v1
+## Upload Data ----------------------------
+
+
+## #################################################### #
 ## DEVELOPING K-MEANS MODEL                             #
 ## a. Data Processing (Vectorization, Normalization)    #
 ## b. Data Training, Evaluation, Selection              #
@@ -183,4 +189,9 @@ print "Classifier had succeeded in revolutionzing itself!!!!"
 ## #################################### #
 ## Make a recommendation ----------------
 recom_list = recommendationMaker(user_idx = 3, processed_db=db_dict_coded, cluster_estimator=kmeans_final, gender="female")
-print "user(idx:3)\'s recommended friends:", recom_list
+print "user(idx:3)\'s recommended friends:", recom_lists
+
+
+
+
+
